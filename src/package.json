@@ -4,7 +4,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node src/db/index.js",
-  
+
   },
   "keywords": [],
   "author": "",
