@@ -1,12 +1,13 @@
 const express=require('express');
 const app=express();
+require('dotenv').config()
 const port=process.env.PORT||3000;
 const auth=require('../middleware/auth.js')
 require('./mongoose')// connect db mongooes.js// run files
 const User=require('../model/user');
 const Task=require('../model/task')//run files
 // run files
-
+const {Welcome}=require('../emails/account');
 const bcrypt=require('bcryptjs')
 
 const main=async ()=>{
@@ -23,102 +24,45 @@ catch(e){
 main()
 
 
+const multer=require('multer')  // file upload npm
+const upload= multer({
+//  dest: 'images',
+  limits:{
+    fileupload:1000000
+  }
+})
+app.post('/upload:id',auth,upload.single('upload'), async (req,res)=>{// upload.single is middleware upload name in postman
+const task =await Task.findOne({  owner: req.user._id})
+if (!task) {
+    return res.status(404).send()
+}
+ task.file=req.file.buffer// file save
+ await task.save()
+   res.send()
+})
+app.get('/users/file:id',auth,async (req,res)=>{
+  try{
+     const task =await Task.findOne({owner: req.user._id})
+     if (!task||!task.file) {
+         return res.status(404).send()
+     }
+     else{
+       res.set('Content-Type','image/jpg')//telling type is image
+       res.send(task.file)
+     }
+  }
+  catch(e){
+    res.status(404).send()
+  }
+})
+
+
+
 
 // parse json to obj automatic
 app.use(express.json());
 //promises chaining
-// app.post('/user',(req,res)=>{
-//   // console.log(req.body);
-//   //res.send("testing");
-//   const user=new User(req.body);// creating new user what we are getting
-//
-//   user.save().then(()=>{
-//      res.send(user);
-//   }).catch((error)=>{
-//          res.status(400);// code error
-//          res.send(error);
-//   })
-//
-// })
-//
-// app.post('/task',(req,res)=>{
-//   const task = new Task(req.body);
-// // save is promises fun
-//   task.save().then(() => {
-//       res.send(task)
-//   }).catch((error) => {
-//     res.status(400);
-//     res.send(error);
-//   })
-//
-// })
-// // reading data
-// app.get('/users',(req,res)=>{
-//   //find return promises
-//   User.find({}).then((users)=>{
-//      res.send(users);
-//   }).catch((e) => {
-//      res.status(500).send();
-//   })
-//
-// })
-// // particular user
-// //route parameter :
-// app.get('/user/:id',(req,res)=>{
-//   //find return promises
-//   const id=req.params.id;
-//   User.findById(id).then((user)=>{
-//     if(!user){
-//     //  conole.log("not found");
-//       return res.status(404);//not found
-//     }
-//      res.send(user);
-//   }).catch((e) => {
-//     //console.log("error");
-//      res.status(500).send();
-//   })
-//
-// })
-//
-// app.get('/tasks',(req,res)=>{
-//   //find return promises
-//   User.find({}).then((tasks)=>{
-//      res.send(tasks);
-//   }).catch((e) => {
-//      res.status(500).send("error");
-//   })
-//
-// })
-// // particular user
-// //route parameter :
-// app.get('/task/:id',(req,res)=>{
-//   //find return promises
-//   const id=req.params.id;
-//   User.findById({id}).then((task)=>{
-//     if(!task){
-//     //  conole.log("not found");
-//       return res.status(404).send("notfound");//not found
-//       //return use for stop execution
-//     }
-//      res.send(task);
-//   }).catch((e) => {
-//     //console.log("error");
-//      res.status(500).send("error");
-//   })
-//
-// })
-//
-//
-// app.post('/users', async (req, res) => {
-//     const user = new User(req.body)
-//
-//     try {
-//         await user.save()
-//         res.status(201).send(user)
-//     } catch (e) {
-//         res.status(400).send(e)
-//     }
-// })
+
 
 var ObjectID = require('mongodb').ObjectID;
 
@@ -139,6 +83,7 @@ app.post('/users/login', async (req, res) => {
 })
 
 app.get('/users/me', auth, async (req, res) => {//auth to call middleware
+
     res.send(req.user)
 })
 // app.get('/users',auth, async (req, res) => {// making fun async using keyword async //auth to middleware
@@ -205,9 +150,9 @@ app.post('/users', async (req, res) => {
     const user = new User(req.body)
 
     try {
-        await user.save()
+        await user.save();
       const token= await  user.generateToken();
-
+         Welcome(user.email,user.name);
         res.status(201).send({user,token})
     } catch (e) {
         res.status(400).send(e)
@@ -354,3 +299,96 @@ app.post('/user/logoutall',auth ,async(req,res)=>{
 app.listen(port, () => {
     console.log('Server is up on port ' + port)
 })
+
+// app.post('/user',(req,res)=>{
+//   // console.log(req.body);
+//   //res.send("testing");
+//   const user=new User(req.body);// creating new user what we are getting
+//
+//   user.save().then(()=>{
+//      res.send(user);
+//   }).catch((error)=>{
+//          res.status(400);// code error
+//          res.send(error);
+//   })
+//
+// })
+//
+// app.post('/task',(req,res)=>{
+//   const task = new Task(req.body);
+// // save is promises fun
+//   task.save().then(() => {
+//       res.send(task)
+//   }).catch((error) => {
+//     res.status(400);
+//     res.send(error);
+//   })
+//
+// })
+// // reading data
+// app.get('/users',(req,res)=>{
+//   //find return promises
+//   User.find({}).then((users)=>{
+//      res.send(users);
+//   }).catch((e) => {
+//      res.status(500).send();
+//   })
+//
+// })
+// // particular user
+// //route parameter :
+// app.get('/user/:id',(req,res)=>{
+//   //find return promises
+//   const id=req.params.id;
+//   User.findById(id).then((user)=>{
+//     if(!user){
+//     //  conole.log("not found");
+//       return res.status(404);//not found
+//     }
+//      res.send(user);
+//   }).catch((e) => {
+//     //console.log("error");
+//      res.status(500).send();
+//   })
+//
+// })
+//
+// app.get('/tasks',(req,res)=>{
+//   //find return promises
+//   User.find({}).then((tasks)=>{
+//      res.send(tasks);
+//   }).catch((e) => {
+//      res.status(500).send("error");
+//   })
+//
+// })
+// // particular user
+// //route parameter :
+// app.get('/task/:id',(req,res)=>{
+//   //find return promises
+//   const id=req.params.id;
+//   User.findById({id}).then((task)=>{
+//     if(!task){
+//     //  conole.log("not found");
+//       return res.status(404).send("notfound");//not found
+//       //return use for stop execution
+//     }
+//      res.send(task);
+//   }).catch((e) => {
+//     //console.log("error");
+//      res.status(500).send("error");
+//   })
+//
+// })
+//
+//
+// app.post('/users', async (req, res) => {
+//     const user = new User(req.body)
+//
+//     try {
+//         await user.save()
+//         res.status(201).send(user)
+//     } catch (e) {
+//         res.status(400).send(e)
+//     }
+// })
